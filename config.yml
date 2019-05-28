@@ -1,0 +1,4 @@
+DB_URIS:
+    "rekognizer:Base": ${DB_URI}
+
+AMQP_URI: ${BROKER_URI}
