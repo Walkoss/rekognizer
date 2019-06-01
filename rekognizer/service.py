@@ -1,13 +1,39 @@
+import json
 import logging
 from typing import List
 
 import cv2
 import numpy as np
-from nameko.rpc import rpc
+from marshmallow import ValidationError
+from nameko.exceptions import BadRequest
+from nameko.rpc import rpc, RpcProxy
+from werkzeug.wrappers import Response
 
+from rekognizer.entrypoints import http
 from rekognizer.face_detector import FaceDetector
 from rekognizer.facenet import Facenet
+from rekognizer.schema import VerifySchema
 from rekognizer.utils import read_image, normalize_image
+
+
+class RekognizerHttpService:
+    name = "rekognizer_http"
+
+    rekognizer_rpc = RpcProxy("rekognizer")
+
+    @http("POST", "/verify", expected_exceptions=(ValidationError, BadRequest))
+    def verify(self, request):
+        logging.info(request)
+        schema = VerifySchema(strict=True)
+
+        try:
+            verify_data = schema.loads(request.get_data(as_text=True)).data
+        except ValueError as exc:
+            raise BadRequest("Invalid json: {}".format(exc))
+
+        verify_result = self.rekognizer_rpc.verify(verify_data["image_urls"])
+
+        return Response(json.dumps(verify_result), mimetype="application/json")
 
 
 class RekognizerService:

@@ -13,4 +13,6 @@ RUN if [ "$ENV" = "production" ]; then pipenv install --system ; else pipenv ins
 
 COPY . ./
 
+EXPOSE 8000
+
 CMD pipenv run nameko run --config ./config.yml rekognizer.service

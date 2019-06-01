@@ -7,7 +7,7 @@ build: ## Build docker image with dev dependencies
 	@docker build --build-arg ENV=development -t facegate/rekognizer:develop .
 
 run: build ## Run application
-	@docker run --rm -it --network facegate-net --name rekognizer-dev facegate/rekognizer:develop
+	@docker run --rm -it -p 8000:8000 --network facegate-net --name rekognizer-dev facegate/rekognizer:develop
 
 migrate-upgrade: ## Apply migrations (upgrade)
 	@docker run --rm -it --network facegate-net facegate/rekognizer:develop pipenv run alembic upgrade head
