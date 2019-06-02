@@ -20,7 +20,7 @@ from rekognizer.face_detector import FaceDetector
 from rekognizer.facenet import Facenet
 from rekognizer.models import DeclarativeBase, Enrollment
 from rekognizer.schema import VerifySchema, IdentifySchema
-from rekognizer.utils import read_image, normalize_image
+from rekognizer.utils import read_image, normalize_image, resize_image
 
 
 class RekognizerHttpService:
@@ -73,6 +73,10 @@ class RekognizerHttpService:
 
         for image_url in image_urls:
             image = read_image(image_url)
+            if image.shape[1] > image.shape[0]:
+                image = resize_image(image, width=600)
+            else:
+                image = resize_image(image, height=600)
             faces = FaceDetector.detect_faces(image)
             faces_len = len(faces)
 
@@ -119,6 +123,10 @@ class RekognizerHttpService:
         logging.info(f"Identifying url: {image_url}")
 
         image = read_image(image_url)
+        if image.shape[1] > image.shape[0]:
+            image = resize_image(image, width=600)
+        else:
+            image = resize_image(image, height=600)
         faces = FaceDetector.detect_faces(image)
         faces_len = len(faces)
 
