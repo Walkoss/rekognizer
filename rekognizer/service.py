@@ -5,6 +5,7 @@ from typing import List
 import cv2
 import numpy as np
 from marshmallow import ValidationError
+from nameko.events import EventDispatcher
 from nameko.exceptions import BadRequest
 from nameko_sqlalchemy import Database
 from werkzeug.wrappers import Response
@@ -26,6 +27,7 @@ class RekognizerHttpService:
     name = "rekognizer_http"
 
     db = Database(DeclarativeBase)
+    dispatch = EventDispatcher()
 
     @http("POST", "/verify", expected_exceptions=(ValidationError, BadRequest))
     def verify(self, request):
@@ -149,6 +151,10 @@ class RekognizerHttpService:
 
         try:
             index = similarities.index(True)
-            return {"user_id": enrollments[index].user_id}
+            payload = {"user_id": enrollments[index].user_id}
+
+            self.dispatch("identification", payload)
+
+            return payload
         except ValueError:
             raise UnknownPersonException(f"Image ({image_url}) has not been identified")
