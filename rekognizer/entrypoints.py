@@ -5,6 +5,12 @@ from nameko.exceptions import safe_for_serialization, BadRequest
 from nameko.web.handlers import HttpRequestHandler
 from werkzeug import Response
 
+from rekognizer.exceptions import (
+    NoFaceException,
+    TooManyFacesException,
+    UnknownPersonException,
+)
+
 
 class HttpEntrypoint(HttpRequestHandler):
     """ Overrides `response_from_exception` so we can customize error handling.
@@ -13,6 +19,9 @@ class HttpEntrypoint(HttpRequestHandler):
     mapped_errors = {
         BadRequest: (400, "BAD_REQUEST"),
         ValidationError: (400, "VALIDATION_ERROR"),
+        NoFaceException: (400, "NO_FACE"),
+        TooManyFacesException: (400, "TOO_MANY_FACE"),
+        UnknownPersonException: (400, "UNKNOWN_PERSON"),
     }
 
     def response_from_exception(self, exc):

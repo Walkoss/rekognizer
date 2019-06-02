@@ -6,24 +6,29 @@ import cv2
 import numpy as np
 from marshmallow import ValidationError
 from nameko.exceptions import BadRequest
-from nameko.rpc import rpc, RpcProxy
+from nameko_sqlalchemy import Database
 from werkzeug.wrappers import Response
 
 from rekognizer.entrypoints import http
+from rekognizer.exceptions import (
+    NoFaceException,
+    TooManyFacesException,
+    UnknownPersonException,
+)
 from rekognizer.face_detector import FaceDetector
 from rekognizer.facenet import Facenet
-from rekognizer.schema import VerifySchema
+from rekognizer.models import DeclarativeBase, Enrollment
+from rekognizer.schema import VerifySchema, IdentifySchema
 from rekognizer.utils import read_image, normalize_image
 
 
 class RekognizerHttpService:
     name = "rekognizer_http"
 
-    rekognizer_rpc = RpcProxy("rekognizer")
+    db = Database(DeclarativeBase)
 
     @http("POST", "/verify", expected_exceptions=(ValidationError, BadRequest))
     def verify(self, request):
-        logging.info(request)
         schema = VerifySchema(strict=True)
 
         try:
@@ -31,16 +36,34 @@ class RekognizerHttpService:
         except ValueError as exc:
             raise BadRequest("Invalid json: {}".format(exc))
 
-        verify_result = self.rekognizer_rpc.verify(verify_data["image_urls"])
+        verify_result = self._verify(verify_data["image_urls"])
 
         return Response(json.dumps(verify_result), mimetype="application/json")
 
+    @http(
+        "POST",
+        "/identify",
+        expected_exceptions=(
+            ValidationError,
+            BadRequest,
+            NoFaceException,
+            TooManyFacesException,
+            UnknownPersonException,
+        ),
+    )
+    def identify(self, request):
+        schema = IdentifySchema(strict=True)
 
-class RekognizerService:
-    name = "rekognizer"
+        try:
+            identify_data = schema.loads(request.get_data(as_text=True)).data
+        except ValueError as exc:
+            raise BadRequest("Invalid json: {}".format(exc))
 
-    @rpc
-    def verify(self, image_urls: List[str]):
+        identify_result = self._identify(identify_data["image_url"])
+
+        return Response(json.dumps(identify_result), mimetype="application/json")
+
+    def _verify(self, image_urls: List[str]):
         logging.info(f"Verifying urls: {image_urls}")
 
         result = []
@@ -89,3 +112,43 @@ class RekognizerService:
                     )
 
         return result
+
+    def _identify(self, image_url: str):
+        logging.info(f"Identifying url: {image_url}")
+
+        image = read_image(image_url)
+        faces = FaceDetector.detect_faces(image)
+        faces_len = len(faces)
+
+        if faces_len == 0:
+            raise NoFaceException(f"Image ({image_url}) doesn't contains face")
+        elif faces_len > 1:
+            raise TooManyFacesException(f"Image ({image_url}) contains too many faces")
+
+        x, y, width, height = faces[0]["box"]
+        cropped_image_face = image[y : y + height, x : x + width]
+        cropped_image_face = cv2.resize(cropped_image_face, (160, 160))
+        cropped_image_face = normalize_image(cropped_image_face)
+
+        # Get embedding of image's face
+        embedding = Facenet.get_embeddings(np.array([cropped_image_face]))[0]
+
+        # Get all embeddings from database
+        enrollments = self.db.session.query(Enrollment).all()
+
+        if len(enrollments) == 0:
+            raise UnknownPersonException(f"Image ({image_url}) has not been identified")
+
+        embeddings = np.array([eb.embedding for eb in enrollments])
+        # Insert embedding at the beginning to compare with other embeddings
+        embeddings = np.insert(embeddings, 0, embedding, axis=0)
+
+        similarities = Facenet.get_similarities(embeddings)
+        # Remove first element as it will always be True
+        similarities.pop(0)
+
+        try:
+            index = similarities.index(True)
+            return {"user_id": enrollments[index].user_id}
+        except ValueError:
+            raise UnknownPersonException(f"Image ({image_url}) has not been identified")
