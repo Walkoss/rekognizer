@@ -18,8 +18,8 @@ class Base(object):
 DeclarativeBase = declarative_base(cls=Base)
 
 
-class Embedding(DeclarativeBase):
-    __tablename__ = "embeddings"
+class Enrollment(DeclarativeBase):
+    __tablename__ = "enrollments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, nullable=False)
