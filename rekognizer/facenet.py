@@ -9,7 +9,7 @@ FACENET_HOST = os.environ.get("FACENET_HOST")
 FACENET_PORT = os.environ.get("FACENET_PORT")
 MODEL_NAME = "facenet"
 SIGNATURE_NAME = "calculate_embeddings"
-THRESHOLD = 0.8
+THRESHOLD = 0.85
 
 
 class Facenet:
@@ -37,6 +37,6 @@ class Facenet:
                 dist = np.sqrt(
                     np.sum(np.square(np.subtract(reference_embedding, embedding)))
                 )
-                result.append(bool(dist < THRESHOLD))
+                result.append(bool(dist <= THRESHOLD))
 
         return result
