@@ -131,9 +131,9 @@ class RekognizerHttpService:
         faces_len = len(faces)
 
         if faces_len == 0:
-            raise NoFaceException(f"Image ({image_url}) doesn't contains face")
+            raise NoFaceException(f"Image doesn't contains face")
         elif faces_len > 1:
-            raise TooManyFacesException(f"Image ({image_url}) contains too many faces")
+            raise TooManyFacesException(f"Image contains too many faces")
 
         x, y, width, height = faces[0]["box"]
         cropped_image_face = image[y : y + height, x : x + width]
@@ -147,7 +147,7 @@ class RekognizerHttpService:
         enrollments = self.db.session.query(Enrollment).all()
 
         if len(enrollments) == 0:
-            raise UnknownPersonException(f"Image ({image_url}) has not been identified")
+            raise UnknownPersonException(f"Image has not been identified")
 
         embeddings = np.array([eb.embedding for eb in enrollments])
         # Insert embedding at the beginning to compare with other embeddings
@@ -165,4 +165,4 @@ class RekognizerHttpService:
 
             return payload
         except ValueError:
-            raise UnknownPersonException(f"Image ({image_url}) has not been identified")
+            raise UnknownPersonException(f"Image has not been identified")
