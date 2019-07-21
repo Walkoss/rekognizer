@@ -5,6 +5,7 @@ from typing import List
 import cv2
 import numpy as np
 from marshmallow import ValidationError
+from nameko.rpc import rpc, RpcProxy
 from nameko.events import EventDispatcher
 from nameko.exceptions import BadRequest
 from nameko_sqlalchemy import Database
@@ -23,11 +24,47 @@ from rekognizer.schema import VerifySchema, IdentifySchema
 from rekognizer.utils import read_image, normalize_image, resize_image
 
 
+class RekognizerService:
+    name = "rekognizer"
+
+    db = Database(DeclarativeBase)
+
+    @rpc
+    def enroll_user(self, user_id, image_urls):
+        for image_url in image_urls:
+            logging.info(f"Analyzing image {image_url}")
+            image = read_image(image_url)
+            if image.shape[1] > image.shape[0]:
+                image = resize_image(image, width=600)
+            else:
+                image = resize_image(image, height=600)
+            faces = FaceDetector.detect_faces(image)
+            faces_len = len(faces)
+
+            if faces_len == 0:
+                raise NoFaceException(f"Image doesn't contains face")
+            elif faces_len > 1:
+                raise TooManyFacesException(f"Image contains too many faces")
+
+            x, y, width, height = faces[0]["box"]
+            cropped_image_face = image[y : y + height, x : x + width]
+            cropped_image_face = cv2.resize(cropped_image_face, (160, 160))
+            cropped_image_face = normalize_image(cropped_image_face)
+
+            # Get embedding of image's face
+            logging.info(f"Getting embedding {image_url}")
+            embedding = Facenet.get_embeddings(np.array([cropped_image_face]))[0]
+
+            with self.db.get_session() as session:
+                session.add(Enrollment(embedding=embedding, user_id=user_id))
+
+
 class RekognizerHttpService:
     name = "rekognizer_http"
 
     db = Database(DeclarativeBase)
     dispatch = EventDispatcher()
+    user_manager = RpcProxy("user_manager")
 
     @http("POST", "/verify", expected_exceptions=(ValidationError, BadRequest))
     def verify(self, request):
@@ -159,10 +196,11 @@ class RekognizerHttpService:
 
         try:
             index = similarities.index(True)
-            payload = {"user_id": enrollments[index].user_id}
 
-            self.dispatch("identification", payload)
+            user = self.user_manager.get_user(user_id=enrollments[index].user_id)
 
-            return payload
+            self.dispatch("identification", user)
+
+            return user
         except ValueError:
             raise UnknownPersonException(f"Image has not been identified")
