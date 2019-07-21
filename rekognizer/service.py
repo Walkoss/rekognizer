@@ -16,6 +16,7 @@ from rekognizer.exceptions import (
     NoFaceException,
     TooManyFacesException,
     UnknownPersonException,
+    UserDisabledException,
 )
 from rekognizer.face_detector import FaceDetector
 from rekognizer.facenet import Facenet
@@ -88,6 +89,7 @@ class RekognizerHttpService:
             NoFaceException,
             TooManyFacesException,
             UnknownPersonException,
+            UserDisabledException,
         ),
     )
     def identify(self, request):
@@ -198,6 +200,8 @@ class RekognizerHttpService:
             index = similarities.index(True)
 
             user = self.user_manager.get_user(user_id=enrollments[index].user_id)
+            if user["is_activated"] is False:
+                raise UserDisabledException(f"User {user['id']} is disabled")
 
             self.dispatch("identification", user)
 

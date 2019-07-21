@@ -9,6 +9,7 @@ from rekognizer.exceptions import (
     NoFaceException,
     TooManyFacesException,
     UnknownPersonException,
+    UserDisabledException,
 )
 
 from functools import partial
@@ -26,6 +27,7 @@ class CorsHttpRequestHandler(HttpRequestHandler):
         NoFaceException: (400, "NO_FACE"),
         TooManyFacesException: (400, "TOO_MANY_FACE"),
         UnknownPersonException: (400, "UNKNOWN_PERSON"),
+        UserDisabledException: (401, "USER_DISABLED"),
     }
 
     def response_from_exception(self, exc):
