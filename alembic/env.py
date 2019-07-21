@@ -62,9 +62,22 @@ def run_migrations_online():
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table_schema=target_metadata.schema,
+            include_schemas=True,
+            include_object=lambda o, n, t, *_: t != "table"
+            or o.schema == target_metadata.schema,
+        )
 
         with context.begin_transaction():
+            connection.execute(f"CREATE SCHEMA IF NOT EXISTS {target_metadata.schema};")
+            """
+            By default search_path is setted to "$user",public 
+            that why alembic can't create foreign keys correctly
+            """
+            context.execute("SET search_path TO public")
             context.run_migrations()
 
 

@@ -9,10 +9,10 @@ build: ## Build docker image with dev dependencies
 run: build ## Run application
 	@docker run --rm -it -p 8002:8000 --network facegate-net --name rekognizer-dev facegate/rekognizer:develop
 
-migrate-upgrade: ## Apply migrations (upgrade)
+migrate-upgrade: build ## Apply migrations (upgrade)
 	@docker run --rm -it --network facegate-net facegate/rekognizer:develop pipenv run alembic upgrade head
 
-migrate-downgrade: ## Apply migrations (downgrade)
+migrate-downgrade: build ## Apply migrations (downgrade)
 	@docker run --rm -it --network facegate-net facegate/rekognizer:develop pipenv run alembic downgrade -1
 
 lint: build ## Lint the project using Flake8

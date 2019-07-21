@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Column, DateTime, Integer, Float
+from sqlalchemy import Column, DateTime, Integer, Float, MetaData
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -15,7 +15,7 @@ class Base(object):
     )
 
 
-DeclarativeBase = declarative_base(cls=Base)
+DeclarativeBase = declarative_base(cls=Base, metadata=MetaData(schema="rekognizer"))
 
 
 class Enrollment(DeclarativeBase):
