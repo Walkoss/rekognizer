@@ -105,7 +105,11 @@ class RekognizerHttpService:
 
         identify_result = self._identify(identify_data["image_url"])
 
-        return Response(json.dumps(identify_result), mimetype="application/json")
+        return Response(
+            json.dumps(identify_result),
+            mimetype="application/json",
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
 
     def _verify(self, image_urls: List[str]):
         logging.info(f"Verifying urls: {image_urls}")
