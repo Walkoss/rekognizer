@@ -4,12 +4,14 @@ from typing import List
 
 import cv2
 import numpy as np
+from kombu import Exchange
 from marshmallow import ValidationError
 from nameko.rpc import rpc, RpcProxy
 from nameko.events import EventDispatcher
 from nameko.exceptions import BadRequest
 from nameko_sqlalchemy import Database
 from werkzeug.wrappers import Response
+from nameko.messaging import Publisher
 
 from rekognizer.entrypoints import http
 from rekognizer.exceptions import (
@@ -66,6 +68,7 @@ class RekognizerHttpService:
     db = Database(DeclarativeBase)
     dispatch = EventDispatcher()
     user_manager = RpcProxy("user_manager")
+    publish = Publisher(exchange=Exchange("rekognizer"))
 
     @http("POST", "/verify", expected_exceptions=(ValidationError, BadRequest))
     def verify(self, request):
@@ -203,7 +206,7 @@ class RekognizerHttpService:
             if user["is_activated"] is False:
                 raise UserDisabledException(f"User {user['id']} is disabled")
 
-            self.dispatch("identification", user)
+            self.publish(user, routing_key="identification")
 
             return user
         except ValueError:
