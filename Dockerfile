@@ -11,6 +11,9 @@ ENV PYTHONPATH /app
 COPY Pipfile Pipfile.lock ./
 RUN if [ "$ENV" = "production" ]; then pipenv install --system ; else pipenv install --system --dev ; fi
 
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
 COPY . ./
 
 EXPOSE 8000

@@ -1,5 +1,8 @@
 DB_URIS:
-    "rekognizer_http:Base": ${DB_URI}
-    "rekognizer:Base": ${DB_URI}
+  "rekognizer_http:Base": ${DB_URI}
+  "rekognizer:Base": ${DB_URI}
 
 AMQP_URI: ${BROKER_URI}
+
+REDIS_URIS:
+  development: "redis://redis-dev:6379/0"

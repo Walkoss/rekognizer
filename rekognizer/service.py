@@ -10,6 +10,7 @@ from nameko.rpc import rpc, RpcProxy
 from nameko.events import EventDispatcher
 from nameko.exceptions import BadRequest
 from nameko_sqlalchemy import Database
+from nameko_redis import Redis
 from werkzeug.wrappers import Response
 from nameko.messaging import Publisher
 
@@ -68,6 +69,7 @@ class RekognizerHttpService:
     db = Database(DeclarativeBase)
     dispatch = EventDispatcher()
     user_manager = RpcProxy("user_manager")
+    redis = Redis('development')
     publish = Publisher(exchange=Exchange("rekognizer"))
 
     @http("POST", "/verify", expected_exceptions=(ValidationError, BadRequest))
@@ -206,7 +208,7 @@ class RekognizerHttpService:
             if user["is_activated"] is False:
                 raise UserDisabledException(f"User {user['id']} is disabled")
 
-            self.publish(user, routing_key="identification")
+            self.redis.publish("identification", json.dumps(user))
 
             return user
         except ValueError:
